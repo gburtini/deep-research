@@ -15,28 +15,40 @@ const rl = readline.createInterface({
 });
 
 // Helper function to get user input
-function askQuestion(query: string): Promise<string> {
+function askQuestion(
+  query: string,
+  exitCondition: 'newline' | 'blank' | 'control' = 'newline',
+): Promise<string> {
   return new Promise(resolve => {
     let input = '';
     console.log(query);
-    rl.on('line', line => {
-      input += line + '\n';
-    });
-    rl.on('close', () => {
-      resolve(input.trim());
-    });
+
+    const handleLine = (line: string) => {
+      if (exitCondition === 'newline') {
+        rl.removeListener('line', handleLine);
+        resolve(line.trim());
+      } else if (exitCondition === 'blank' && line.trim() === '') {
+        rl.removeListener('line', handleLine);
+        resolve(input.trim());
+      } else if (exitCondition === 'control' && line.trim() === 'exit') {
+        rl.removeListener('line', handleLine);
+        resolve(input.trim());
+      } else {
+        input += line + '\n';
+      }
+    };
+
+    rl.on('line', handleLine);
   });
 }
-
-// To handle Ctrl+D (end of input)
-rl.on('SIGINT', () => {
-  rl.close();
-});
 
 // run the agent
 async function run() {
   // Get initial query
-  const initialQuery = await askQuestion('What would you like to research? ');
+  const initialQuery = await askQuestion(
+    'What would you like to research? Type "exit" to be done.',
+    'control',
+  );
 
   // Get breath and depth parameters
   const breadth =
@@ -66,7 +78,7 @@ async function run() {
   // Collect answers to follow-up questions
   const answers: string[] = [];
   for (const question of followUpQuestions) {
-    const answer = await askQuestion(`\n${question}\nYour answer: `);
+    const answer = await askQuestion(`\n${question}\nYour answer: `, 'blank');
     answers.push(answer);
   }
 
