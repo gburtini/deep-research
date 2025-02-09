@@ -17,11 +17,21 @@ const rl = readline.createInterface({
 // Helper function to get user input
 function askQuestion(query: string): Promise<string> {
   return new Promise(resolve => {
-    rl.question(query, answer => {
-      resolve(answer);
+    let input = '';
+    console.log(query);
+    rl.on('line', line => {
+      input += line + '\n';
+    });
+    rl.on('close', () => {
+      resolve(input.trim());
     });
   });
 }
+
+// To handle Ctrl+D (end of input)
+rl.on('SIGINT', () => {
+  rl.close();
+});
 
 // run the agent
 async function run() {
