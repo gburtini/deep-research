@@ -81,7 +81,7 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
   );
   console.log('Writing final report...');
 
-  const report = await writeFinalReport({
+  const { steps, report } = await writeFinalReport({
     prompt: combinedQuery,
     learnings,
     visitedUrls,
@@ -100,6 +100,9 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
   ${learnings.map((l, i) => `  ${i + 1}. ${l}`).join('\n')}
   - Visited URLs (${visitedUrls.length}):
   ${visitedUrls.map((u, i) => `  ${i + 1}. ${u}`).join('\n')}
+
+  # Refinement Steps
+  ${steps.map((s, i) => `  ${i + 1}. ${s}`).join('\n\n')}
   `;
   let fileName =
     (await generateFileName({ query: combinedQuery })) ??

@@ -160,7 +160,10 @@ export async function writeFinalReport({
   });
 
   // Refine the report iteratively
+  let steps = [];
   for (let i = 0; i < refinementIterates; i++) {
+    steps.push(res.object.reportMarkdown);
+
     const refinedReport = await refineReport({
       report: res.object.reportMarkdown,
       initialQuery: prompt,
@@ -173,7 +176,10 @@ export async function writeFinalReport({
 
   // Append the visited URLs section to the report
   const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
-  return res.object.reportMarkdown + urlsSection;
+  return {
+    steps,
+    report: res.object.reportMarkdown + urlsSection,
+  };
 }
 
 export async function generateFileName({
