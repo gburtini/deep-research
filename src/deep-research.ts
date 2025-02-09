@@ -7,6 +7,26 @@ import { z } from 'zod';
 import { o3MiniModel, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
 
+function slugify(text: string, options: { lower: boolean; strict: boolean }) {
+  let slug = text
+    .toString()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (options.lower) {
+    slug = slug.toLowerCase();
+  }
+
+  if (options.strict) {
+    slug = slug.replace(/[^a-z0-9-]/g, '');
+  }
+
+  return slug;
+}
+
 type ResearchResult = {
   learnings: string[];
   visitedUrls: string[];
@@ -139,6 +159,25 @@ export async function writeFinalReport({
   // Append the visited URLs section to the report
   const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
   return res.object.reportMarkdown + urlsSection;
+}
+
+export async function generateFileName({
+  query,
+}: {
+  query: string;
+}): Promise<string> {
+  const res = await generateObject({
+    model: o3MiniModel,
+    system: systemPrompt(),
+    prompt: `Given the following query from the user, suggest a suitable file name for saving the research results. Do NOT include a file extension. The file name should be concise, descriptive, and relevant to the query: <query>${query}</query>`,
+    schema: z.object({
+      fileName: z
+        .string()
+        .describe('Suggested file name for the research results'),
+    }),
+  });
+
+  return slugify(res.object.fileName, { lower: true, strict: true });
 }
 
 const MAX_RETRIES = 5;
