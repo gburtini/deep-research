@@ -141,6 +141,46 @@ export async function writeFinalReport({
   return res.object.reportMarkdown + urlsSection;
 }
 
+const MAX_RETRIES = 5;
+const INITIAL_BACKOFF = 1000; // 1 second
+
+async function firecrawlSearchWithRetry(
+  query: string,
+  retries = MAX_RETRIES,
+): Promise<SearchResponse> {
+  let attempt = 0;
+  let backoff = INITIAL_BACKOFF;
+
+  while (attempt < retries) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, INITIAL_BACKOFF));
+
+      return await firecrawl.search(query, {
+        timeout: 15000,
+        limit: 5,
+        scrapeOptions: { formats: ['markdown'] },
+      });
+    } catch (e: any) {
+      if (e.message && e.message.includes('Timeout')) {
+        console.error(`Timeout error running query: ${query}: `, e);
+      } else {
+        console.error(`Error running query: ${query}: `, e);
+      }
+
+      attempt++;
+      if (attempt < retries) {
+        console.log(`Retrying query: ${query} in ${backoff}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoff));
+        backoff *= 2; // Exponential backoff
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  throw new Error(`Failed to run query: ${query}`);
+}
+
 export async function deepResearch({
   query,
   breadth,
@@ -165,11 +205,7 @@ export async function deepResearch({
     serpQueries.map(serpQuery =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
-            timeout: 15000,
-            limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
-          });
+          const result = await firecrawlSearchWithRetry(serpQuery.query);
 
           // Collect URLs from this search
           const newUrls = compact(result.data.map(item => item.url));
