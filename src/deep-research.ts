@@ -34,7 +34,7 @@ type ResearchResult = {
 };
 
 // increase this if you have higher API rate limits
-const ConcurrencyLimit = 2;
+const ConcurrencyLimit = 1;
 
 // Initialize Firecrawl with optional API key and optional base url
 
@@ -134,10 +134,12 @@ export async function writeFinalReport({
   prompt,
   learnings,
   visitedUrls,
+  refinementIterates = 1,
 }: {
   prompt: string;
   learnings: string[];
   visitedUrls: string[];
+  refinementIterates?: number;
 }) {
   const learningsString = trimPrompt(
     learnings
@@ -156,6 +158,18 @@ export async function writeFinalReport({
         .describe('Final report on the topic in Markdown'),
     }),
   });
+
+  // Refine the report iteratively
+  for (let i = 0; i < refinementIterates; i++) {
+    const refinedReport = await refineReport({
+      report: res.object.reportMarkdown,
+      initialQuery: prompt,
+      breadth: 3,
+      depth: 2,
+    });
+
+    res.object.reportMarkdown = refinedReport;
+  }
 
   // Append the visited URLs section to the report
   const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
@@ -182,7 +196,7 @@ export async function generateFileName({
 }
 
 const MAX_RETRIES = 5;
-const INITIAL_BACKOFF = 1000; // 1 second
+const INITIAL_BACKOFF = 5000; // 5 second
 
 async function firecrawlSearchWithRetry(
   query: string,
@@ -308,4 +322,87 @@ export async function deepResearch({
     visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
     queries: serpQueries,
   };
+}
+
+export async function refineReport({
+  report,
+  initialQuery,
+  breadth,
+  depth,
+}: {
+  report: string;
+  initialQuery: string;
+  breadth: number;
+  depth: number;
+}): Promise<string> {
+  console.log(`Refining report with deep research...`);
+
+  // Step 1: Generate criticism
+  const criticismRes = await generateObject({
+    model: o3MiniModel,
+    system: systemPrompt(),
+    prompt: `Given the following report, provide a detailed criticism highlighting any gaps, weaknesses, or areas for further research. Be as specific as possible:\n\n<report>${report}</report>`,
+    schema: z.object({
+      criticism: z.string().describe('Detailed criticism of the report'),
+    }),
+  });
+
+  const criticism = criticismRes.object.criticism;
+  console.log(`Generated criticism:\n${criticism}`);
+
+  // Step 2: Generate follow-up questions based on criticism
+  const followUpQuestionsRes = await generateObject({
+    model: o3MiniModel,
+    system: systemPrompt(),
+    prompt: `Given the following criticism, generate follow-up questions to address the gaps and weaknesses identified. Return a maximum of ${breadth} questions:\n\n<criticism>${criticism}</criticism>`,
+    schema: z.object({
+      questions: z
+        .array(z.string())
+        .describe('Follow-up questions based on criticism'),
+    }),
+  });
+
+  const followUpQuestions = followUpQuestionsRes.object.questions.slice(
+    0,
+    breadth,
+  );
+  console.log(
+    `Generated follow-up questions:\n${followUpQuestions.join('\n')}`,
+  );
+
+  // Step 3: Conduct deep research based on follow-up questions
+  const combinedQuery = `
+Initial Query: ${initialQuery}
+Criticism: ${criticism}
+Follow-up Questions:
+${followUpQuestions.map(q => `Q: ${q}`).join('\n')}
+`;
+
+  const { learnings, visitedUrls } = await deepResearch({
+    query: combinedQuery,
+    breadth,
+    depth,
+  });
+
+  console.log(`\n\nNew Learnings:\n\n${learnings.join('\n')}`);
+  console.log(
+    `\n\nNew Visited URLs (${visitedUrls.length}):\n\n${visitedUrls.join('\n')}`,
+  );
+
+  // Step 4: Revise the report with new learnings
+  const revisedReportRes = await generateObject({
+    model: o3MiniModel,
+    system: systemPrompt(),
+    prompt: `Given the following initial report and new learnings, revise the report to address the criticism and incorporate the new information. Make it as detailed as possible:\n\n<report>${report}</report>\n\n<learnings>${learnings.join('\n')}</learnings>`,
+    schema: z.object({
+      revisedReport: z
+        .string()
+        .describe('Revised report incorporating new learnings'),
+    }),
+  });
+
+  const revisedReport = revisedReportRes.object.revisedReport;
+  console.log(`Revised Report:\n${revisedReport}`);
+
+  return revisedReport;
 }
