@@ -399,7 +399,7 @@ ${followUpQuestions.map(q => `Q: ${q}`).join('\n')}
   const revisedReportRes = await generateObject({
     model: o3MiniModel,
     system: systemPrompt(),
-    prompt: `Given the following initial report and new learnings, revise the report to address the criticism and incorporate the new information. Make it as detailed as possible:\n\n<report>${report}</report>\n\n<learnings>${learnings.join('\n')}</learnings>`,
+    prompt: `Given the following initial report, criticism and new learnings, revise the report to address the criticism and incorporate the new information. Your result will be delivered to the user as the final report, so do not call it "revised report" or similar. Make it as detailed as possible:\n\n<report>${report}</report>\n\n<criticism>${criticism}</criticism>\n\n<learnings>${learnings.join('\n')}</learnings>`,
     schema: z.object({
       revisedReport: z
         .string()
