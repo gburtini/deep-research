@@ -30,6 +30,7 @@ function slugify(text: string, options: { lower: boolean; strict: boolean }) {
 type ResearchResult = {
   learnings: string[];
   visitedUrls: string[];
+  queries: { query: string; researchGoal: string }[];
 };
 
 // increase this if you have higher API rate limits
@@ -280,6 +281,7 @@ export async function deepResearch({
             return {
               learnings: allLearnings,
               visitedUrls: allUrls,
+              queries: serpQueries,
             };
           }
         } catch (e: any) {
@@ -294,6 +296,7 @@ export async function deepResearch({
           return {
             learnings: [],
             visitedUrls: [],
+            queries: [],
           };
         }
       }),
@@ -303,5 +306,6 @@ export async function deepResearch({
   return {
     learnings: [...new Set(results.flatMap(r => r.learnings))],
     visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
+    queries: serpQueries,
   };
 }

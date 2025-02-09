@@ -68,7 +68,7 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
 
   console.log('\nResearching your topic...');
 
-  const { learnings, visitedUrls } = await deepResearch({
+  const { learnings, visitedUrls, queries } = await deepResearch({
     query: combinedQuery,
     breadth,
     depth,
@@ -86,12 +86,26 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
     visitedUrls,
   });
 
+  const metadata = `
+  # Research Metadata
+  - Initial Query: ${initialQuery}
+  - Breadth: ${breadth}
+  - Depth: ${depth}
+  - Follow-up Questions and Answers:
+  ${followUpQuestions.map((q, i) => `  - Q: ${q}\n    A: ${answers[i]}`).join('\n')}
+  - Research Plan (${queries.length}):
+  ${queries.map(q => `  - ${q.researchGoal} (${q.query})`).join('\n')}
+  - Learnings (${learnings.length}):
+  ${learnings.map((l, i) => `  ${i + 1}. ${l}`).join('\n')}
+  - Visited URLs (${visitedUrls.length}):
+  ${visitedUrls.map((u, i) => `  ${i + 1}. ${u}`).join('\n')}
+  `;
   const fileName =
     (await generateFileName({ query: combinedQuery })) ??
     new Date().toISOString();
 
   // Save report to file
-  await fs.writeFile(`output/${fileName}.md`, report, 'utf-8');
+  await fs.writeFile(`output/${fileName}.md`, report + metadata, 'utf-8');
 
   console.log(`\n\nFinal Report:\n\n${report}`);
   console.log('\nReport has been saved to output.md');
