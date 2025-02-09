@@ -64,6 +64,14 @@ async function run() {
       10,
     ) || 2;
 
+  const refinement =
+    parseInt(
+      await askQuestion(
+        'How many criticize/refine loops would you like to run? (default 1): ',
+      ),
+      10,
+    ) || 1;
+
   console.log(`Creating research plan...`);
 
   // Generate follow-up questions
@@ -107,6 +115,7 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
     prompt: combinedQuery,
     learnings,
     visitedUrls,
+    refinementIterates: refinement,
   });
 
   const metadata = `
