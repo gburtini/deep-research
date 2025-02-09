@@ -241,6 +241,18 @@ async function firecrawlSearchWithRetry(
   throw new Error(`Failed to run query: ${query}`);
 }
 
+/**
+ * Deep research function that recursively searches for information based on a query.
+ *
+ * @param query The initial query to start the research
+ * @param breadth The number of follow-up questions to ask for each search result (then, reduced by a factor of 2 for each level of depth)
+ * @param depth The depth of the research, i.e. how many levels of follow-up questions to ask
+ *
+ * @param learnings The list of learnings from previous research
+ * @param visitedUrls The list of visited URLs from previous research
+ *
+ * @returns The research result containing the learnings, visited URLs, and the queries executed
+ */
 export async function deepResearch({
   query,
   breadth,
