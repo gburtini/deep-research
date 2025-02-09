@@ -119,7 +119,9 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
   });
 
   const metadata = `
-  # Research Metadata
+
+# Research Metadata
+
   - Initial Query: ${initialQuery}
   - Breadth: ${breadth}
   - Depth: ${depth}
