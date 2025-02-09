@@ -1,3 +1,4 @@
+import fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as readline from 'readline';
 
@@ -100,11 +101,28 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
   - Visited URLs (${visitedUrls.length}):
   ${visitedUrls.map((u, i) => `  ${i + 1}. ${u}`).join('\n')}
   `;
-  const fileName =
+  let fileName =
     (await generateFileName({ query: combinedQuery })) ??
     new Date().toISOString();
 
   // Save report to file
+  if (!fsSync.existsSync('output')) {
+    await fs.mkdir('output');
+  }
+
+  let originalFileName = fileName;
+  let i = 1;
+  while (fsSync.existsSync(`output/${fileName}.md`)) {
+    fileName = `${originalFileName}-${i}`;
+    i++;
+
+    if (i > 100) {
+      console.log(report + metadata);
+      console.error('Error: Could not save report. Please try again.');
+      process.exit(1);
+    }
+  }
+
   await fs.writeFile(`output/${fileName}.md`, report + metadata, 'utf-8');
 
   console.log(`\n\nFinal Report:\n\n${report}`);
